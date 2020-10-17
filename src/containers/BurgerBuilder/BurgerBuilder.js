@@ -3,6 +3,8 @@ import Burger from '../../components/Burger/Burger';
 import BuildControls from '../../components/Burger/BuildControls/BuildControls';
 import Modal from '../../components/UI/Modal/Modal';
 import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary';
+import axios from '../../axios-orders';
+import Spinner from '../../components/UI/Spinner/Spinner';
 
 const INGREDIENT_PRICE ={
     salad:0.5,
@@ -13,7 +15,7 @@ const INGREDIENT_PRICE ={
 
 class BurgerBuilder extends Component{
 
-    state={
+    state={ 
         ingredients:{
             salad:0,
             bacon:0,
@@ -22,7 +24,8 @@ class BurgerBuilder extends Component{
         },
         totalPrice : 0,
         purchasable:false,
-        purchasing:false
+        purchasing:false,
+        isLoading : false
     }
 
     updatePurchaseState = (ingredients)=>{
@@ -79,9 +82,55 @@ class BurgerBuilder extends Component{
    }
 
    purchaseContinueHandler =()=>{
-       alert('Continue');
+    //    alert('Continue');
+
+        /*
+
+        For Firebase if we want to post any data in a new node we add that node after
+        forward-slash('/'). Also ".json" is needed to appended in case of firebase so that 
+        it functions properly.
+        In below case final end-point that axios instance will hit is baseURL + /node.json that
+        is : "https://shop-burger.firebaseio.com/orders.json"
+
+        */    
+        this.setState({
+            isLoading : true
+        });
+        const order = {
+            ingredients : this.state.ingredients,
+            price : this.state.totalPrice,
+            customer : {       
+                //dummy customers object
+                name : "Customer-TEST",
+                address : {
+                    street : "test-street",
+                    city : "test-city",
+                    country : "test-country",
+                    zipCode : "XXXXXX"
+                },
+                email: "test@host.com"
+            },
+            deliveryType : "fast"
+        }
+        axios.post('/orders.json',order)
+          .then((response)=>{
+            this.setState({
+                isLoading : false,
+                purchasing :  false
+            })
+            console.log("Response is : ",response);
+            alert("Order placed",order);
+          })
+          .catch((error)=>{
+            this.setState({
+                isLoading : false,
+                purchasing : false
+            })
+            console.log("Some error occured while placing order",error);
+          });
    }
 
+   
     render(){
         
         const disabledKey = { ...this.state.ingredients};
@@ -90,14 +139,20 @@ class BurgerBuilder extends Component{
         {
             disabledKey[key]=disabledKey[key] <= 0 ? true : false;
         }
+
+        let orderElement = <OrderSummary ingredients={this.state.ingredients} canceled={this.purchaseCancelHandler}
+            continued={this.purchaseContinueHandler}
+            price={this.state.totalPrice}
+        />;
+        if (this.state.isLoading) {
+            orderElement = <Spinner />
+        }
+
         
         return (
             <>
             <Modal show_property={this.state.purchasing} click={this.purchaseCancelHandler}>
-                <OrderSummary ingredients={this.state.ingredients} canceled={this.purchaseCancelHandler}
-                continued={this.purchaseContinueHandler}
-                price={this.state.totalPrice}
-                />
+                {orderElement}
             </Modal>
             <Burger ingredients={this.state.ingredients}/>
             <BuildControls ingredientadded={this.addIngredientHandler} 
