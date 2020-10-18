@@ -5,6 +5,7 @@ import Modal from '../../components/UI/Modal/Modal';
 import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary';
 import axios from '../../axios-orders';
 import Spinner from '../../components/UI/Spinner/Spinner';
+import withErrorHandler from '../../hoc/withErrorHandler/withErrorHandler';
 
 const INGREDIENT_PRICE ={
     salad:0.5,
@@ -16,16 +17,28 @@ const INGREDIENT_PRICE ={
 class BurgerBuilder extends Component{
 
     state={ 
-        ingredients:{
-            salad:0,
-            bacon:0,
-            meat:0,
-            cheese:0
-        },
+        ingredients:null,
         totalPrice : 0,
         purchasable:false,
         purchasing:false,
-        isLoading : false
+        isLoading : false,
+        isIngredientsFetchErr : null
+    }
+
+    componentDidMount = ()=>{
+        axios.get('/ingredients.json')
+          .then((response)=>{
+              console.log("responded ingredients are",response.data);
+              this.setState({
+                  ingredients : response.data
+              })
+          })
+          .catch((err)=>{
+              console.log(err);
+              this.setState({
+                  isIngredientsFetchErr : err
+              })
+          })
     }
 
     updatePurchaseState = (ingredients)=>{
@@ -119,7 +132,7 @@ class BurgerBuilder extends Component{
                 purchasing :  false
             })
             console.log("Response is : ",response);
-            alert("Order placed",order);
+            // alert("Order placed",order);
           })
           .catch((error)=>{
             this.setState({
@@ -140,31 +153,40 @@ class BurgerBuilder extends Component{
             disabledKey[key]=disabledKey[key] <= 0 ? true : false;
         }
 
-        let orderElement = <OrderSummary ingredients={this.state.ingredients} canceled={this.purchaseCancelHandler}
+        let orderElement = this.state.ingredients ? (<OrderSummary ingredients={this.state.ingredients} canceled={this.purchaseCancelHandler}
             continued={this.purchaseContinueHandler}
             price={this.state.totalPrice}
-        />;
+        />) : null;
         if (this.state.isLoading) {
             orderElement = <Spinner />
         }
 
+        let burgers = this.state.ingredients ? (
+        <>
+        <Burger ingredients={this.state.ingredients}/>
+        <BuildControls ingredientadded={this.addIngredientHandler} 
+        ingredientremoved = {this.removeIngredientHandler}
+        dis = {disabledKey}
+        Price={this.state.totalPrice}
+        order_dis={!this.state.purchasable}
+        ordered={this.purchasseHandler}
+        />
+        </>) : <Spinner />;
+
+        if(this.state.isIngredientsFetchErr){
+            burgers = <p>Unable to fetch Ingredients!</p>
+        }
         
         return (
             <>
             <Modal show_property={this.state.purchasing} click={this.purchaseCancelHandler}>
                 {orderElement}
             </Modal>
-            <Burger ingredients={this.state.ingredients}/>
-            <BuildControls ingredientadded={this.addIngredientHandler} 
-            ingredientremoved = {this.removeIngredientHandler}
-            dis = {disabledKey}
-            Price={this.state.totalPrice}
-            order_dis={!this.state.purchasable}
-            ordered={this.purchasseHandler}
-            />
+            
+             {burgers}
             </>
         )
     }
 }
 
-export default BurgerBuilder;
+export default withErrorHandler(BurgerBuilder , axios);
