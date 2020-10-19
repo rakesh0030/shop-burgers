@@ -26,6 +26,7 @@ class BurgerBuilder extends Component{
     }
 
     componentDidMount = ()=>{
+        console.log(this.props);
         axios.get('/ingredients.json')
           .then((response)=>{
               console.log("responded ingredients are",response.data);
@@ -106,6 +107,8 @@ class BurgerBuilder extends Component{
         is : "https://shop-burger.firebaseio.com/orders.json"
 
         */    
+
+        /*
         this.setState({
             isLoading : true
         });
@@ -140,6 +143,16 @@ class BurgerBuilder extends Component{
                 purchasing : false
             })
             console.log("Some error occured while placing order",error);
+          });
+          */
+          const queryParams = [];
+          for(let i in this.state.ingredients){
+              queryParams.push(encodeURIComponent(i) + "=" + encodeURIComponent(this.state.ingredients[i]));
+          }
+          const queryString = queryParams.join('&');
+          this.props.history.push({
+              pathname : '/checkout',
+              search : '?' + queryString
           });
    }
 
